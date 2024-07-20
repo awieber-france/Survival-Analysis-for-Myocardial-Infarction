@@ -1,6 +1,6 @@
 ---
 title: "Survival Analysis of Mycardial Infarction"
-author: "Davat, Claire; Fondzewong, Anslem; Wieber, Andrew"
+author: "Davat, Claire; Fondzewong Wiyfengla, Anslem; Wieber, Andrew"
 date: "July 20th, 2024"
 output:
   pdf_document: default
