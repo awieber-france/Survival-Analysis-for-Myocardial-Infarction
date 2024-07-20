@@ -1,0 +1,51 @@
+---
+title: "Survival Analysis of Mycardial Infarction"
+author: "Davat, Claire; Fondzewong, Anslem; Wieber, Andrew"
+date: "July 20th, 2024"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Activate the libraries and import the dataset
+
+```{r}
+# purge stored data
+rm(list=ls())
+# in package timereg
+library(survival)
+library(timereg)
+data(TRACE)
+dim(TRACE) #Check the number of lines and rows
+head(TRACE) #Look at the first data
+```
+# Count the number of unique patients and missing data
+```{r}
+#Find the number of unique patients
+nbPatients <- length(unique(rownames(TRACE)))
+paste("Number of unique patients =", nbPatients)
+
+#Find the number of NA entries
+paste("Total nb of NA =", sum(is.na(TRACE)))
+```
+
+# See who died and how
+```{r}
+# 9 = death by myocardial infarction
+# 7:8 = death by other reasons
+# 0 = alive
+table(TRACE$status)
+```
+
+#Compare sex with clinical heart pump failure
+```{r}
+# 1 = female; 0 = male
+# 1 = failure is present; 0 = failure is absent
+table(TRACE$sex, TRACE$chf)
+```
+
+#Take a look at the age distribution
+```{r}
+hist(TRACE$age)
+```
+
