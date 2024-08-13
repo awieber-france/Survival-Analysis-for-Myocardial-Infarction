@@ -1,0 +1,218 @@
+---
+title: "Survival Analysis Project"
+author: "FONDZEWONG WIYFENGLA ANSLEM"
+date: "2024-08-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Setup and Data Preparation
+
+```{r}
+# Clear workspace and load required libraries
+rm(list = ls())
+library(survival)
+library(ggplot2)
+library(timereg)
+library(gridExtra)
+library(caret)
+library(survminer)
+```
+```{r}
+# Load the TRACE dataset
+data(TRACE)
+
+# Basic checks
+dim(TRACE)  # Dimensions of the dataset
+head(TRACE)  # First few rows of the dataset
+```
+
+
+
+Data Summary and Initial Exploration
+
+```{r}
+# Summary statistics of the dataset
+summary(TRACE)
+
+# Count the number of unique patients
+nbPatients <- length(unique(rownames(TRACE)))
+paste("Number of unique patients =", nbPatients)
+
+# Count the number of missing values
+paste("Total number of NA =", sum(is.na(TRACE)))
+```
+
+Data Visualization: Histograms and Pie Charts
+
+```{r}
+# Histograms for key variables
+par(mfrow = c(2, 2))
+hist(TRACE$age, main = "Age Distribution", xlab = "Age")
+hist(TRACE$time, main = "Time Distribution", xlab = "Time")
+hist(TRACE$wmi, main = "WMI Distribution", xlab = "WMI")
+
+# Combine status values 7 and 8 into one category for better visualization
+TRACE$status2 <- ifelse(TRACE$status == 7 | TRACE$status == 8, "7&8", TRACE$status)
+TRACE$status2 <- factor(TRACE$status2, levels = c(0, "7&8", 9), labels = c("Alive", "Dead other causes", "Dead from MI"))
+```
+
+```{r}
+# Function to create pie charts
+create_pie_chart <- function(data, labels, title) {
+  data <- as.data.frame(data)
+  data$labels <- labels
+  data$percent <- round(data$Freq / sum(data$Freq) * 100, 1)
+  data$labels <- paste(data$labels, data$percent, "%")
+  
+  ggplot(data, aes(x = "", y = Freq, fill = labels)) +
+    geom_bar(stat = "identity", width = 1) +
+    coord_polar("y") +
+    theme_void() +
+    labs(title = title) +
+    geom_text(aes(label = labels), position = position_stack(vjust = 0.3), size = 2.5)
+}
+
+# Generate pie charts for categorical variables
+p1 <- create_pie_chart(table(TRACE$sex), c("Male", "Female"), "Sex")
+p2 <- create_pie_chart(table(TRACE$status2), c("Alive", "Dead others", "Dead from MI"), "Status")
+p3 <- create_pie_chart(table(TRACE$diabetes), c("Absent", "Present"), "Diabetes")
+p4 <- create_pie_chart(table(TRACE$vf), c("Absent", "Present"), "Ventricular Fibrillation")
+p5 <- create_pie_chart(table(TRACE$chf), c("Absent", "Present"), "Heart Pump Failure")
+
+# Arrange the pie charts
+grid.arrange(p1, p2, p3, p4, p5, ncol = 2)
+
+```
+
+
+
+
+
+
+Nonparametric Estimation of Survival and Comparison of Groups
+
+          This section involves Kaplan-Meier estimation, which is a nonparametric method used to estimate the survival function from the data. The overall survival probability is estimated, and the survival probability is compared between different groups, such as male and female patients. A log-rank test is performed to statistically compare the survival curves between these groups.
+          
+
+
+    Kaplan-Meier Estimation for Overall Survival
+
+```{r}
+
+km_fit <- survfit(Surv(time, status == 9) ~ 1, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit, 
+           conf.int = TRUE, 
+           title = "Overall Survival", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability")
+
+```
+
+After fitting the model, it generates a plot showing the survival probability over time, with confidence intervals to indicate the uncertainty around the estimated survival probabilities.
+
+
+
+    Kaplan-Meier Estimation by Sex
+    
+    Here, the survival analysis is extended by grouping the data based on the sex of the individuals. This allows for a comparison of survival probabilities between different groups (in this case, males and females). A separate Kaplan-Meier curve is generated for each group, and these curves are plotted together to visually compare the survival experiences of the groups over time.
+    
+```{r}
+km_fit_sex <- survfit(Surv(time, status == 9) ~ sex, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_sex, 
+           conf.int = TRUE, 
+           title = "Survival by Sex", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.labs = c("Male", "Female"))
+
+```
+
+
+    Log-rank test to compare survival between groups
+```{r}
+surv_diff <- survdiff(Surv(time, status == 9) ~ sex, data = TRACE)
+
+# Display the result
+surv_diff
+
+```
+
+
+
+
+
+
+
+
+
+
+Semi-parametric Cox Regression Analysis
+
+    In this section we focus on building Cox proportional hazards models, which are used to assess the impact of multiple covariates on survival. Two versions of the model are created: one without interaction terms and one with interaction terms. The interaction model examines whether the effect of one variable on survival depends on another variable. The results are summarized to interpret the significance and impact of each covariate.
+    
+
+    Cox Proportional Hazards Model
+
+```{r}
+cox_model <- coxph(Surv(time, status == 9) ~ age + sex + wmi + diabetes + vf + chf, data = TRACE)
+summary(cox_model)
+```
+
+    Cox Model with Interaction Terms
+
+```{r}
+cox_model_interactions <- coxph(Surv(time, status == 9) ~ wmi*chf + wmi*age + wmi*sex + wmi*diabetes + wmi*vf +
+                                  chf*age + chf*sex + chf*diabetes + chf*vf +
+                                  age*sex + age*diabetes + age*vf +
+                                  sex*diabetes + sex*vf +
+                                  diabetes*vf,
+                                data = TRACE)
+summary(cox_model_interactions)
+
+```
+
+
+
+
+
+Cox Model with Ridge Penalization
+
+    In this section, we extend the Cox model with ridge penalization, which is a regularization technique used to handle multicollinearity and prevent overfitting. This method adds a penalty to the model coefficients, helping to shrink less important variables toward zero. The summary of this model provides insight into the effects of the covariates after applying regularization.
+
+```{r}
+fit_coxph_ridge <- coxph(Surv(time, status == 9) ~ ridge(age + sex + wmi + diabetes + vf + chf), data = TRACE)
+summary(fit_coxph_ridge)
+```
+
+
+
+
+
+Cross-validation of Cox Model
+
+    Here we implement a k-fold cross-validation process to evaluate the performance of the Cox model. The dataset is split into k subsets (folds), and the model is trained on k-1 folds while being tested on the remaining fold. This process is repeated k times, and the results are averaged to assess the model’s stability and generalizability. The cross-validation helps in understanding how well the model might perform on unseen data.
+```{r}
+# K-Folds Cross-validation
+k = 10  # Number of folds
+folds <- createFolds(TRACE$status, k = k)
+
+# Perform cross-validation
+cv_results <- lapply(folds, function(x) {
+  train <- TRACE[-x,]
+  test <- TRACE[x,]
+  fit <- coxph(Surv(time, status == 9) ~ age + sex + wmi + diabetes + vf + chf, data = train)
+  return(summary(fit))
+})
+
+# Display one of the models as an example
+cv_results[[1]]
+```
+
