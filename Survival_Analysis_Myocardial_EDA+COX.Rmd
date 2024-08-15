@@ -339,23 +339,33 @@ fit_all <- coxph_chosen(TRACE)
 variables <- names(fit_all$assign)
 X <- as.matrix(TRACE[,variables])
 #Prepare variables to store results
+log_likelihood_train <- list()
 log_likelihood_global <- list()
 # Loop through the folds 
 for (i in 1:(k)){
   # Split into train and test 
   train <- TRACE[-folds[[i]],] 
   test <- TRACE[folds[[i]],]
+  
   # Train the model
   fit <- coxph_chosen(train)
-  train_loglik <- fit$loglik[2]
   betas <- as.vector(fit$coefficients)
-  like_indiv <- (exp(X %*% betas) / sum(exp(X %*% betas))) ** (TRACE$status == 9)
-  log_likelihood_global[[i]] <- sum(log(like_indiv))
+  
+  #Calculate the likelihoods using training betas on training data
+  #train_loglik <- fit$loglik[2]
+  X_train <- as.matrix(train[,variables])
+  like_train <- (exp(X_train %*% betas) / sum(exp(X_train %*% betas))) ** (train$status == 9)
+  log_likelihood_train[[i]] <- sum(log(like_train)) #instead of taking the log of the product of likelihoods
+  
+  #Calculate the likelihoods using training betas for all data
+  like_global <- (exp(X %*% betas) / sum(exp(X %*% betas))) ** (TRACE$status == 9)
+  log_likelihood_global[[i]] <- sum(log(like_global)) #instead of taking the log of the product of likelihoods
 }
 
-CVE <- -2 * sum(unlist(log_likelihood_global) - unlist(train_loglik))
+CVE <- -2 * sum(unlist(log_likelihood_global) - unlist(log_likelihood_train))
 cat("Cross Validation Error:", CVE)
 ```
+
 
 ## Hazard Ratios
 ```{r}
