@@ -311,31 +311,82 @@ cox_model_interactions <- coxph(Surv(time, status == 9) ~ wmi*chf + wmi*age + wm
                                 data = TRACE)
 summary(cox_model_interactions)
 ```
+# Schoenfeld Residuals - Null Hypothesis = Constant Covariates (proportionality of hazards)
+```{r}
+residual.sch <- cox.zph(cox_model_interactions)
+residual.sch
+```
+
 
 # Cox Proportional Hazard with Ridge Penalization 
 ```{r}
 fit.coxph <- coxph(Surv(time, status == 9) ~ ridge(age + sex + wmi + diabetes + vf + chf), data=TRACE)
 summary(fit.coxph)
 ```
-
-# Cross-validation with K-Folds
+# CROSS VALIDATION + STATISTICAL ANALYSIS
+## Verweij & Van Houwelingen Cross Validation
 ```{r}
+#Make the input coxph function
+coxph_chosen <- function(data){
+  fit <- coxph(Surv(time, status == 9) ~ age + sex + wmi + diabetes + chf + vf, data=data)
+  return(fit)
+}
+#Initialize the folds
 k = 10 #number of folds
-folds <- createFolds(TRACE$status, k = k) 
-  
+folds <- createFolds(TRACE$status, k = k)
+#Generate matrix containing only variables used in fit
+fit_all <- coxph_chosen(TRACE)
+variables <- names(fit_all$assign)
+X <- as.matrix(TRACE[,variables])
+#Prepare variables to store results
+log_likelihood_global <- list()
 # Loop through the folds 
-for (i in 1:k){
+for (i in 1:(k)){
   # Split into train and test 
   train <- TRACE[-folds[[i]],] 
-  test <- TRACE[folds[[i]],] 
+  test <- TRACE[folds[[i]],]
   # Train the model
-  fit <- coxph(Surv(time, status == 9) ~ age + sex + wmi + diabetes + vf + chf, data=train)
+  fit <- coxph_chosen(train)
+  train_loglik <- fit$loglik[2]
+  betas <- as.vector(fit$coefficients)
+  like_indiv <- (exp(X %*% betas) / sum(exp(X %*% betas))) ** (TRACE$status == 9)
+  log_likelihood_global[[i]] <- sum(log(like_indiv))
 }
+
+CVE <- -2 * sum(unlist(log_likelihood_global) - unlist(train_loglik))
+cat("Cross Validation Error:", CVE)
 ```
 
+## Hazard Ratios
 ```{r}
-fit
+exp(fit_all$coefficients)
 ```
 
+## ANOVA
+```{r}
+anova(fit_all)
+```
 
+## Cox PH Conversion to Survival
+```{r}
+surv_coxph <- survfit(fit_all)
+tail(surv_coxph$surv) #Look at survival probability
+```
+
+## Plots of CoxPH Survival & Cumulative Hazard
+```{r}
+plot(survfit(fit_all), main="Survival Probability",
+     ylab="Probability", xlab="Years",
+     col=c("turquoise", "black", "black"))
+
+plot(survfit(fit_all, type="fleming"), fun="cumhaz", main="Cumulative Hazard",
+     ylab="Hazard", xlab="Years",
+     col=c("turquoise", "black", "black"))
+```
+## Check the proportional hazards hypothesis
+```{r}
+zph <- cox.zph(fit_all)
+zph
+plot(zph)
+```
 
