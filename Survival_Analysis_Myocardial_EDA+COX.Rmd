@@ -18,6 +18,7 @@ library(ggplot2)
 library(timereg)
 library(gridExtra)
 library(caret)
+library(data.table)
 data(TRACE)
 dim(TRACE) #Check the number of lines and rows
 head(TRACE) #Look at the first data
@@ -326,49 +327,62 @@ summary(fit.coxph)
 # CROSS VALIDATION + STATISTICAL ANALYSIS
 ## Verweij & Van Houwelingen Cross Validation
 ```{r}
+set.seed(333891)
+
 #Make the input coxph function
-coxph_chosen <- function(data){
-  fit <- coxph(Surv(time, status == 9) ~ age + sex + wmi + diabetes + chf + vf, data=data)
+coxph_chosen <- function(data, formula, beta_init=NULL){
+  if (is.null(beta_init)){
+    fit <- coxph(eval(parse(text=formula)), data=data)
+  } else {
+    fit <- coxph(eval(parse(text=formula)), data=data, init=beta_init)
+  }
   return(fit)
 }
-#Initialize the folds
-k = 10 #number of folds
-folds <- createFolds(TRACE$status, k = k)
-#Generate matrix containing only variables used in fit
-fit_all <- coxph_chosen(TRACE)
-variables <- names(fit_all$assign)
-X <- as.matrix(TRACE[,variables])
-#Prepare variables to store results
-log_likelihood_train <- list()
-log_likelihood_global <- list()
-# Loop through the folds 
-for (i in 1:(k)){
-  # Split into train and test 
-  train <- TRACE[-folds[[i]],] 
-  test <- TRACE[folds[[i]],]
-  
-  # Train the model
-  fit <- coxph_chosen(train)
-  betas <- as.vector(fit$coefficients)
-  
-  #Calculate the likelihoods using training betas on training data
-  #train_loglik <- fit$loglik[2]
-  X_train <- as.matrix(train[,variables])
-  like_train <- (exp(X_train %*% betas) / sum(exp(X_train %*% betas))) ** (train$status == 9)
-  log_likelihood_train[[i]] <- sum(log(like_train)) #instead of taking the log of the product of likelihoods
-  
-  #Calculate the likelihoods using training betas for all data
-  like_global <- (exp(X %*% betas) / sum(exp(X %*% betas))) ** (TRACE$status == 9)
-  log_likelihood_global[[i]] <- sum(log(like_global)) #instead of taking the log of the product of likelihoods
-}
 
-CVE <- -2 * sum(unlist(log_likelihood_global) - unlist(log_likelihood_train))
-cat("Cross Validation Error:", CVE)
+#Generate data frame ordered by survival time and with survival group column (necessary for likelihood calculation)
+cross_validation <- function(df, formula, nb_folds=10){
+  #Initialize the folds
+  folds <- createFolds(df[,1], k = nb_folds)
+  #Prepare variables to store results
+  log_likelihood_train <- list()
+  log_likelihood_global <- list()
+  # Loop through the folds 
+  for (i in 1:nb_folds){
+    # Split into train and test 
+    df_train <- df[-folds[[i]],] 
+    #df_test <- df[folds[[i]],]
+    
+    # Train the model using fold
+    fit <- coxph_chosen(df_train, formula)
+    betas <- as.vector(fit$coefficients)
+    
+    # Train with all data, but using the betas derived from the fold
+    fit_global <- coxph_chosen(df, formula, betas)
+    
+    #Save log likelihoods
+    log_likelihood_train[[i]] <- fit$loglik[2] #Retrieve the final log likelihood (final betas)
+    log_likelihood_global[[i]] <- fit_global$loglik[1] #Retrieve the inital log likelihood (starting betas)
+  }
+  CVE <- -2 * sum(unlist(log_likelihood_global) - unlist(log_likelihood_train))
+  cat("Cross Validation Error: ", CVE, "\n", "Formula: ", formula, "\n\n", sep = "")
+}
 ```
 
+## Run Multiple CoxPH Models through the cross validation and compare
+```{r}
+formulas <- c("Surv(time, status == 9) ~ age + sex + wmi + diabetes + chf + vf",
+             "Surv(time, status == 9) ~ age + sex + wmi*diabetes + chf*vf",
+             "Surv(time, status == 9) ~ age + sex + wmi + diabetes + chf + vf",
+             "Surv(time, status == 9) ~ ridge(age + sex + wmi + diabetes + chf + vf)",
+             "Surv(time, status == 9) ~ age + wmi + strata(sex + diabetes + chf + vf)")
+for (formula in formulas){
+  cross_validation(TRACE, formula)
+}
+```
 
 ## Hazard Ratios
 ```{r}
+fit_all <- coxph(Surv(time, status == 9) ~ age + sex + wmi + diabetes + chf + vf, data=TRACE)
 exp(fit_all$coefficients)
 ```
 
