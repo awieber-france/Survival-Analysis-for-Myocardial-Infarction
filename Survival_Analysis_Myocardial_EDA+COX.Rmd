@@ -423,9 +423,18 @@ ggcoxdiagnostics(fit_best, type = "schoenfeld")
 ## Check nonlinearity (Martingale residuals)
 ### Using reduced coxph model
 ```{r}
+#Make a dataframe containing transforms of age and wmi
+TRACE2 <- TRACE
+TRACE2$age_pow_2.6 = TRACE2$age**2.6 #Best transform to make age linear
+TRACE2$ln_wmi = log(TRACE$wmi) #Best transform to make WMI linear
+
+#Fit both standard and transformed coxph models
 fit <- coxph(Surv(time, status == 9) ~ age + wmi, data=TRACE)
+fit2 <- coxph(Surv(time, status == 9) ~ age_pow_2.6 + ln_wmi, data=TRACE2)
+
+#Plot the Martingale residuals to verify that the nonlinear age and wmi variables are made linear after transformation
 ggcoxfunctional(fit = fit, data=TRACE) #Test only continuous variables
-#ggcoxdiagnostics(fit_best, type = "martingale", linear.predictions = FALSE)
+ggcoxfunctional(fit = fit2, data=TRACE2) #Test only continuous variables
 ```
 #### Age and WMI are non-linear. A transformation to linearize them could be useful, such as log, square root, power, etc.
 
