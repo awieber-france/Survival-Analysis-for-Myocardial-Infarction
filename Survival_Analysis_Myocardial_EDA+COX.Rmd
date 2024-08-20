@@ -19,6 +19,7 @@ library(timereg)
 library(gridExtra)
 library(caret)
 library(data.table)
+library("survminer")
 data(TRACE)
 dim(TRACE) #Check the number of lines and rows
 head(TRACE) #Look at the first data
@@ -409,8 +410,41 @@ plot(survfit(fit_all, type="fleming"), fun="cumhaz", main="Cumulative Hazard",
 ```
 ## Check the proportional hazards hypothesis
 ```{r}
-zph <- cox.zph(fit_all)
+fit_best <- coxph(Surv(time, status == 9) ~ age + wmi + strata(sex + diabetes + chf + vf), data=TRACE)
+
+zph <- cox.zph(fit_best)
 zph
 plot(zph)
+
+#Schoenfeld residuals - test for proportionality
+ggcoxdiagnostics(fit_best, type = "schoenfeld")
 ```
 
+## Check nonlinearity (Martingale residuals)
+### Using reduced coxph model
+```{r}
+fit <- coxph(Surv(time, status == 9) ~ age + wmi, data=TRACE)
+ggcoxfunctional(fit = fit, data=TRACE) #Test only continuous variables
+#ggcoxdiagnostics(fit_best, type = "martingale", linear.predictions = FALSE)
+```
+### Using full coxph model
+```{r}
+mart_resid <- residuals(fit_best , type = "martingale")
+#Age
+plot(TRACE$age, mart_resid)
+lines(lowess(TRACE$age, mart_resid), lwd=2)
+#WMI
+plot(TRACE$wmi, mart_resid)
+lines(lowess(TRACE$wmi, mart_resid), lwd=2)
+```
+
+## Check for outliers (Deviance residuals)
+```{r}
+#Deviance residual (normalized transform of Martingale residuals) - test for influential outliers
+ggcoxdiagnostics(fit_best, type = "deviance", linear.predictions = FALSE)
+```
+
+### Deviance values above 0 indicate individuals who died sooner than expected,
+### while values below 0 indicate individuals who died later.
+### Within +- 1 is the typical desired variance. Here, it is mostly +- 2, which means that
+### the data contains a lot of variance. Early deaths likely have an influence on the results.
