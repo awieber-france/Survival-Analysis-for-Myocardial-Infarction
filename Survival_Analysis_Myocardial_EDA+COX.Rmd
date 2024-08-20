@@ -427,6 +427,8 @@ fit <- coxph(Surv(time, status == 9) ~ age + wmi, data=TRACE)
 ggcoxfunctional(fit = fit, data=TRACE) #Test only continuous variables
 #ggcoxdiagnostics(fit_best, type = "martingale", linear.predictions = FALSE)
 ```
+#### Age and WMI are non-linear. A transformation to linearize them could be useful, such as log, square root, power, etc.
+
 ### Using full coxph model
 ```{r}
 mart_resid <- residuals(fit_best , type = "martingale")
@@ -444,7 +446,7 @@ lines(lowess(TRACE$wmi, mart_resid), lwd=2)
 ggcoxdiagnostics(fit_best, type = "deviance", linear.predictions = FALSE)
 ```
 
-### Deviance values above 0 indicate individuals who died sooner than expected,
-### while values below 0 indicate individuals who died later.
-### Within +- 1 is the typical desired variance. Here, it is mostly +- 2, which means that
-### the data contains a lot of variance. Early deaths likely have an influence on the results.
+#### Deviance values above 0 indicate individuals who died sooner than expected,
+#### while values below 0 indicate individuals who died later.
+#### Within +- 1 is the typical desired variance. Here, it is mostly +- 2, which means that
+#### the data contains a lot of variance. Early deaths likely have an influence on the results.
