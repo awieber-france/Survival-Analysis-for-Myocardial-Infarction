@@ -89,6 +89,10 @@ grid.arrange(p1, p2, p3, p4, p5, ncol = 2)
 ```
 
 
+```{r}
+head(TRACE)
+```
+
 
 
 
@@ -112,7 +116,10 @@ ggsurvplot(km_fit,
            xlab = "Time (years)", 
            ylab = "Survival Probability")
 
+km_fit
 ```
+
+
 
 After fitting the model, it generates a plot showing the survival probability over time, with confidence intervals to indicate the uncertainty around the estimated survival probabilities.
 
@@ -144,6 +151,207 @@ surv_diff <- survdiff(Surv(time, status == 9) ~ sex, data = TRACE)
 surv_diff
 
 ```
+
+
+Kaplan-Meier Estimation by Age Group
+  Here patients are divided into three age groups: < 60 years, 60-70 years, and > 70 years. This is done using the cut function, which segments continuous age data into specified intervals.
+Kaplan-Meier Fit: A Kaplan-Meier survival curve is estimated for each of these age groups using the survfit function.
+Plotting: The ggsurvplot function is used to visualize the survival curves for each age group, showing how survival probability changes over time across the different age categories.
+
+```{r}
+# Create age groups
+TRACE$age_group <- cut(TRACE$age, breaks = c(-Inf, 60, 70, Inf), labels = c("< 60 years", "60-70 years", "> 70 years"))
+
+# Kaplan-Meier fit by age group
+km_fit_age <- survfit(Surv(time, status == 9) ~ age_group, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_age, 
+           conf.int = TRUE, 
+           title = "Survival by Age Group", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.labs = levels(TRACE$age_group))
+
+```
+
+
+Kaplan-Meier Estimation by WMI Group
+
+Grouping: Patients are categorized into three groups based on their WMI (Wall Motion Index) values: Low, Medium, and High. The groups are defined by dividing the WMI data into three equal parts (tertiles) based on quantiles.
+Kaplan-Meier Fit: Kaplan-Meier survival curves are computed for each WMI group.
+Plotting: The survival curves are plotted, allowing comparison of survival probabilities among patients with low, medium, and high WMI values.
+
+
+
+```{r}
+# Create WMI groups
+TRACE$wmi_group <- cut(TRACE$wmi, breaks = quantile(TRACE$wmi, probs = c(0, 0.33, 0.66, 1), na.rm = TRUE), labels = c("Low", "Medium", "High"))
+
+# Kaplan-Meier fit by WMI group
+km_fit_wmi <- survfit(Surv(time, status == 9) ~ wmi_group, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_wmi, 
+           conf.int = TRUE, 
+           title = "Survival by WMI Group", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.labs = levels(TRACE$wmi_group))
+
+```
+
+
+
+
+
+Kaplan-Meier Estimation by Diabetes Status
+
+Patients are grouped based on the presence or absence of diabetes.
+Kaplan-Meier Fit: A Kaplan-Meier survival analysis is performed separately for patients with and without diabetes.
+Plotting: The resulting survival curves are displayed, showing differences in survival probabilities between diabetic and non-diabetic patients.
+```{r}
+# Kaplan-Meier fit by diabetes status
+km_fit_diabetes <- survfit(Surv(time, status == 9) ~ diabetes, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_diabetes, 
+           conf.int = TRUE, 
+           title = "Survival by Diabetes Status", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.labs = c("Absent", "Present"))
+
+```
+
+
+
+
+Kaplan-Meier Estimation by Ventricular Fibrillation (VF) Status
+
+Patients are divided based on whether they have ventricular fibrillation (VF) or not.
+Kaplan-Meier Fit: The survival analysis is carried out for both groups: those with VF and those without.
+Plotting: The survival curves for patients with and without VF are plotted, allowing visual comparison of survival probabilities between the two groups.
+
+```{r}
+# Kaplan-Meier fit by ventricular fibrillation status
+km_fit_vf <- survfit(Surv(time, status == 9) ~ vf, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_vf, 
+           conf.int = TRUE, 
+           title = "Survival by Ventricular Fibrillation (VF) Status", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.labs = c("Absent", "Present"))
+
+```
+
+
+
+Cross Group Analysis: Diabetes Status and Ventricular Fibrillation (VF) Status
+      
+      This section extends the Kaplan-Meier analysis by examining the survival probabilities of patients based on both diabetes status and VF status. It creates a combined grouping of these variables, allowing for more detailed insights into how these factors interact and influence survival.
+
+```{r}
+# Kaplan-Meier fit by Diabetes and Ventricular Fibrillation (VF) Status
+km_fit_diabetes_vf <- survfit(Surv(time, status == 9) ~ diabetes + vf, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_diabetes_vf, 
+           conf.int = TRUE, 
+           title = "Survival by Diabetes and Ventricular Fibrillation (VF) Status", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.title = "Groups",
+           legend.labs = c("Diabetes Absent & VF Absent", "Diabetes Absent & VF Present", 
+                           "Diabetes Present & VF Absent", "Diabetes Present & VF Present"))
+
+```
+
+
+
+Cross Group Analysis: Age Group and Ventricular Fibrillation (VF) Status
+      
+      Similar to the previous section, this analysis explores the interaction between age groups and VF status. By splitting the data into age categories and analyzing their survival alongside VF status, we gain a better understanding of how age and VF together impact survival probabilities.
+
+```{r}
+# Kaplan-Meier fit by Age Group and Ventricular Fibrillation (VF) Status
+km_fit_age_vf <- survfit(Surv(time, status == 9) ~ age_group + vf, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_age_vf, 
+           conf.int = TRUE, 
+           title = "Survival by Age Group and Ventricular Fibrillation (VF) Status", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.title = "Groups",
+           legend.labs = c("< 60 years & VF Absent", "< 60 years & VF Present", 
+                           "60-70 years & VF Absent", "60-70 years & VF Present", 
+                           "> 70 years & VF Absent", "> 70 years & VF Present"))
+
+```
+
+
+Cross Group Analysis: WMI Group and Diabetes Status
+      
+      Here, the analysis is focused on the interaction between Wall Motion Index (WMI) groups and diabetes status. This allows for a comparison of survival probabilities across different WMI categories while also considering the presence or absence of diabetes.
+
+```{r}
+# Kaplan-Meier fit by WMI Group and Diabetes Status
+km_fit_wmi_diabetes <- survfit(Surv(time, status == 9) ~ wmi_group + diabetes, data = TRACE)
+
+# Plotting
+ggsurvplot(km_fit_wmi_diabetes, 
+           conf.int = TRUE, 
+           title = "Survival by WMI Group and Diabetes Status", 
+           xlab = "Time (years)", 
+           ylab = "Survival Probability", 
+           legend.title = "Groups",
+           legend.labs = c("Low WMI & Diabetes Absent", "Low WMI & Diabetes Present", 
+                           "Medium WMI & Diabetes Absent", "Medium WMI & Diabetes Present", 
+                           "High WMI & Diabetes Absent", "High WMI & Diabetes Present"))
+
+```
+
+
+Multiplot of All Kaplan-Meier Analyses
+    
+    The multiplot section compiles all the Kaplan-Meier plots from the earlier sections into one combined view. This allows for a side-by-side comparison of survival probabilities across different groupings, providing a comprehensive visual summary of the survival analysis.
+
+```{r}
+# Generate individual plots
+p1 <- ggsurvplot(km_fit_sex, conf.int = TRUE, title = "Survival by Sex")
+p2 <- ggsurvplot(km_fit_age, conf.int = TRUE, title = "Survival by Age Group")
+p3 <- ggsurvplot(km_fit_wmi, conf.int = TRUE, title = "Survival by WMI Group")
+p4 <- ggsurvplot(km_fit_diabetes, conf.int = TRUE, title = "Survival by Diabetes Status")
+p5 <- ggsurvplot(km_fit_vf, conf.int = TRUE, title = "Survival by Ventricular Fibrillation Status")
+p6 <- ggsurvplot(km_fit_diabetes_vf, conf.int = TRUE, title = "Survival by Diabetes and VF Status")
+p7 <- ggsurvplot(km_fit_age_vf, conf.int = TRUE, title = "Survival by Age Group and VF Status")
+p8 <- ggsurvplot(km_fit_wmi_diabetes, conf.int = TRUE, title = "Survival by WMI and Diabetes Status")
+
+# Arrange the plots in a multiplot layout
+grid.arrange(p1$plot, p2$plot, p3$plot, p4$plot, p5$plot, p6$plot, p7$plot, p8$plot, ncol = 2)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
