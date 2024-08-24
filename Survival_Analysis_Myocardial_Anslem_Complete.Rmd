@@ -21,6 +21,7 @@ library(gridExtra)
 library(caret)
 library(survminer)
 ```
+
 ```{r}
 # Load the TRACE dataset
 data(TRACE)
@@ -115,7 +116,9 @@ ggsurvplot(km_fit,
            title = "Overall Survival", 
            xlab = "Time (years)", 
            ylab = "Survival Probability")
+```
 
+```{r}
 km_fit
 ```
 
@@ -174,6 +177,15 @@ ggsurvplot(km_fit_age,
            legend.labs = levels(TRACE$age_group))
 
 ```
+    Log-rank test to compare survival between Age Group
+```{r}
+km_fit_age <- survfit(Surv(time, status == 9) ~ age_group, data = TRACE)
+
+# Display the result
+km_fit_age
+
+```
+
 
 
 Kaplan-Meier Estimation by WMI Group
@@ -201,7 +213,13 @@ ggsurvplot(km_fit_wmi,
 
 ```
 
+    Log-rank test to compare survival WMI Group
+```{r}
+km_fit_wmi <- survfit(Surv(time, status == 9) ~ wmi_group, data = TRACE)
 
+# Display the result
+km_fit_wmi
+```
 
 
 
@@ -223,7 +241,14 @@ ggsurvplot(km_fit_diabetes,
            legend.labs = c("Absent", "Present"))
 
 ```
+  
+    Log-rank test to compare survival Diabetes Status
+```{r}
+km_fit_diabetes <- survfit(Surv(time, status == 9) ~ diabetes, data = TRACE)
 
+# Display the result
+km_fit_diabetes
+```
 
 
 
@@ -247,6 +272,14 @@ ggsurvplot(km_fit_vf,
 
 ```
 
+    Log-rank test to compare survival Ventricular Fibrillation Status
+```{r}
+km_fit_vf <- survfit(Surv(time, status == 9) ~ vf, data = TRACE)
+
+# Display the result
+km_fit_vf
+```
+
 
 
 Cross Group Analysis: Diabetes Status and Ventricular Fibrillation (VF) Status
@@ -268,7 +301,13 @@ ggsurvplot(km_fit_diabetes_vf,
                            "Diabetes Present & VF Absent", "Diabetes Present & VF Present"))
 
 ```
+    Log-rank test to compare survival by Diabetes and Ventricular Fibrillation Status
+```{r}
+km_fit_diabetes_vf <- survfit(Surv(time, status == 9) ~ diabetes + vf, data = TRACE)
 
+# Display the result
+km_fit_diabetes_vf
+```
 
 
 Cross Group Analysis: Age Group and Ventricular Fibrillation (VF) Status
@@ -293,6 +332,14 @@ ggsurvplot(km_fit_age_vf,
 ```
 
 
+    Log-rank test to compare survival by Diabetes and Ventricular Fibrillation Status
+```{r}
+km_fit_age_vf <- survfit(Surv(time, status == 9) ~ age_group + vf, data = TRACE)
+
+# Display the result
+km_fit_age_vf
+```
+
 Cross Group Analysis: WMI Group and Diabetes Status
       
       Here, the analysis is focused on the interaction between Wall Motion Index (WMI) groups and diabetes status. This allows for a comparison of survival probabilities across different WMI categories while also considering the presence or absence of diabetes.
@@ -313,6 +360,17 @@ ggsurvplot(km_fit_wmi_diabetes,
                            "High WMI & Diabetes Absent", "High WMI & Diabetes Present"))
 
 ```
+
+
+    Log-rank test to compare survival by Diabetes and Ventricular Fibrillation Status
+```{r}
+km_fit_wmi_diabetes <- survfit(Surv(time, status == 9) ~ wmi_group + diabetes, data = TRACE)
+
+# Display the result
+km_fit_wmi_diabetes
+```
+
+
 
 
 Multiplot of All Kaplan-Meier Analyses
