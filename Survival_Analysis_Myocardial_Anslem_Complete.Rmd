@@ -116,9 +116,7 @@ ggsurvplot(km_fit,
            title = "Overall Survival", 
            xlab = "Time (years)", 
            ylab = "Survival Probability")
-```
 
-```{r}
 km_fit
 ```
 
@@ -179,7 +177,7 @@ ggsurvplot(km_fit_age,
 ```
     Log-rank test to compare survival between Age Group
 ```{r}
-km_fit_age <- survfit(Surv(time, status == 9) ~ age_group, data = TRACE)
+km_fit_age <- survdiff(Surv(time, status == 9) ~ age_group, data = TRACE)
 
 # Display the result
 km_fit_age
@@ -215,7 +213,7 @@ ggsurvplot(km_fit_wmi,
 
     Log-rank test to compare survival WMI Group
 ```{r}
-km_fit_wmi <- survfit(Surv(time, status == 9) ~ wmi_group, data = TRACE)
+km_fit_wmi <- survdiff(Surv(time, status == 9) ~ wmi_group, data = TRACE)
 
 # Display the result
 km_fit_wmi
@@ -244,7 +242,7 @@ ggsurvplot(km_fit_diabetes,
   
     Log-rank test to compare survival Diabetes Status
 ```{r}
-km_fit_diabetes <- survfit(Surv(time, status == 9) ~ diabetes, data = TRACE)
+km_fit_diabetes <- survdiff(Surv(time, status == 9) ~ diabetes, data = TRACE)
 
 # Display the result
 km_fit_diabetes
@@ -274,7 +272,7 @@ ggsurvplot(km_fit_vf,
 
     Log-rank test to compare survival Ventricular Fibrillation Status
 ```{r}
-km_fit_vf <- survfit(Surv(time, status == 9) ~ vf, data = TRACE)
+km_fit_vf <- survdiff(Surv(time, status == 9) ~ vf, data = TRACE)
 
 # Display the result
 km_fit_vf
@@ -303,7 +301,7 @@ ggsurvplot(km_fit_diabetes_vf,
 ```
     Log-rank test to compare survival by Diabetes and Ventricular Fibrillation Status
 ```{r}
-km_fit_diabetes_vf <- survfit(Surv(time, status == 9) ~ diabetes + vf, data = TRACE)
+km_fit_diabetes_vf <- survdiff(Surv(time, status == 9) ~ diabetes + vf, data = TRACE)
 
 # Display the result
 km_fit_diabetes_vf
@@ -334,7 +332,7 @@ ggsurvplot(km_fit_age_vf,
 
     Log-rank test to compare survival by Diabetes and Ventricular Fibrillation Status
 ```{r}
-km_fit_age_vf <- survfit(Surv(time, status == 9) ~ age_group + vf, data = TRACE)
+km_fit_age_vf <- survdiff(Surv(time, status == 9) ~ age_group + vf, data = TRACE)
 
 # Display the result
 km_fit_age_vf
@@ -364,7 +362,7 @@ ggsurvplot(km_fit_wmi_diabetes,
 
     Log-rank test to compare survival by Diabetes and Ventricular Fibrillation Status
 ```{r}
-km_fit_wmi_diabetes <- survfit(Surv(time, status == 9) ~ wmi_group + diabetes, data = TRACE)
+km_fit_wmi_diabetes <- survdiff(Surv(time, status == 9) ~ wmi_group + diabetes, data = TRACE)
 
 # Display the result
 km_fit_wmi_diabetes
