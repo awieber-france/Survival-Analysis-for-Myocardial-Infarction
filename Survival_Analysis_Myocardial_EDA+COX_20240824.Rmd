@@ -57,7 +57,7 @@ paste("Total nb of NA =", sum(is.na(TRACE)))
 summary(TRACE)
 ```
 ID:
-The dataset contains 6,672 unique patients
+The dataset contains 1,878 unique patients
 
 WMI (Wall Motion Index):
 Ranges from 0.3 to 3.0.
@@ -155,7 +155,7 @@ p4 <- create_pie_chart(vf_counts, vf_labels, "Ventricular Fibrillation")
 p5 <- create_pie_chart(chf_counts, chf_labels, "Heart pump failure")
 
 # Arrange the plots in a 2x2 grid
-grid.arrange(p1, p2, p3, p4, p5, ncol = 2)
+grid.arrange(p1, p2, p3, p4, p5, ncol = 3)
 ```
 
 ## 2.6) Boxplots of variables with respect to age
@@ -369,6 +369,16 @@ ggsurvplot(km_fit_wmi,
            ylab = "Survival Probability", 
            legend.labs = levels(TRACE$wmi_group))
 ```
+```{r}
+#Examine the cutoffs between the different WMI groups
+min(TRACE$wmi[which(TRACE$wmi_group == "Low")])
+max(TRACE$wmi[which(TRACE$wmi_group == "Low")])
+min(TRACE$wmi[which(TRACE$wmi_group == "Medium")])
+max(TRACE$wmi[which(TRACE$wmi_group == "Medium")])
+min(TRACE$wmi[which(TRACE$wmi_group == "High")])
+max(TRACE$wmi[which(TRACE$wmi_group == "High")])
+```
+
 ```{r}
 # Log-rank test to compare survival WMI Group
 km_fit_wmi <- survdiff(Surv(time, status == 9) ~ wmi_group, data = TRACE)
@@ -813,7 +823,7 @@ abline(h = 0, col = "red")
 lines(lowess(event_times, schoenfeld_res2[, "ln_wmi"]), col = "blue")
 ```
 
-Visually for the most of the variables the curb seems constant over time without clear trend except for chf
+Visually for the most of the variables the curve seems constant over time without clear trend except for chf
 
 -> we remove it
 
@@ -916,10 +926,10 @@ plot(cox.zph_test_tinteract_t2)
 
 ### 4.8.1) Examine initial survival curve
 ```{r}
-# Survival curb
+# Survival curve
 surv_object <- Surv(coxTRACE$time, coxTRACE$status)
 fit <- survfit(surv_object ~ 1, data = coxTRACE)
-plot(fit, xlab = "Time", ylab = "Survival prob", main = "Survival courb")
+plot(fit, xlab = "Time (years)", ylab = "Survival probability", main = "Survival curve")
 ```
 -> we can see an important decrease the first 1.5/2 years
 -> stabilisation around 6.5/7years
@@ -936,12 +946,19 @@ coxTRACE_truncated <- within(coxTRACE, {
   time_truncated <- ifelse(time < truncation_point_inf, truncation_point_inf, ifelse(time > truncation_point_sup,truncation_point_sup , time))
   
   # Truncation of time-dependent covariates
-  chf_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, chf)
-  age_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, age)
-  sex_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, sex)
-  vf_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, vf)
-  wmi_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, wmi)
-  diabetes_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, diabetes)
+  chf_truncated <- chf
+  age_truncated <- age
+  sex_truncated <- sex
+  vf_truncated <- vf
+  wmi_truncated <- wmi
+  diabetes_truncated <- diabetes
+  
+  #chf_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, chf)
+  #age_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, age)
+  #sex_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, sex)
+  #vf_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, vf)
+  #wmi_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, wmi)
+  #diabetes_truncated <- ifelse(time < truncation_point_inf | time > truncation_point_sup, 0, diabetes)
 })
 
 # Survival with truncated variables
@@ -949,13 +966,13 @@ surv_object_truncated <- Surv(coxTRACE_truncated$time_truncated, coxTRACE_trunca
 fit_truncated <- survfit(surv_object_truncated ~ 1, data = coxTRACE_truncated)
 
 # Visualize the new survival curve
-plot(fit_truncated, xlab = "Time", ylab = "Survival prob", main = "Survival curb with truncated data")
+plot(fit_truncated, xlab = "Time (years)", ylab = "Survival probability", main = "Survival curve with truncated data")
 
 ```
 
 ### 4.8.3) CoxPH model of this truncated data (all basic variables)
 ```{r}
-cox_model_trunc <- coxph(Surv(time_truncated, status_truncated) ~ sex_truncated + chf_truncated  + vf_truncated + age_truncated + wmi_truncated + diabetes_truncated , data = coxTRACE_truncated)
+cox_model_trunc <- coxph(Surv(time_truncated, status_truncated) ~ sex + chf  + vf + age + wmi + diabetes, data = coxTRACE_truncated)
 summary(cox_model_trunc)
 vif_values_trunc <-vif(cox_model_trunc)
 print(vif_values_trunc)
@@ -967,11 +984,11 @@ print(cox.zph_trunc$table)
 plot(cox.zph_trunc)
 ```
 
--> let's remove vf_truncated + wmi_truncated
+-> let's remove vf_truncated
 
-### 4.8.4) CoxPH model of this truncated data - vf and wmi removed
+### 4.8.4) CoxPH model of this truncated data - vf dropped
 ```{r}
-cox_model_trunc2 <- coxph(Surv(time_truncated, status_truncated) ~ sex_truncated + chf_truncated  + age_truncated + diabetes_truncated , data = coxTRACE_truncated)
+cox_model_trunc2 <- coxph(Surv(time_truncated, status_truncated) ~ sex + chf + age + wmi + diabetes, data = coxTRACE_truncated)
 summary(cox_model_trunc2)
 vif_values_trunc2 <-vif(cox_model_trunc2)
 print(vif_values_trunc2)
@@ -987,32 +1004,32 @@ plot(cox.zph_trunc2)
 #Martingale residual 
 coxTRACE_truncated$residual_trunc <- residuals(cox_model_trunc2, type = "martingale")
 
-par(mfrow = c(1, 3), mar = c(4.2, 2, 2, 2))
+par(mfrow = c(1, 4), mar = c(4.2, 2, 2, 2))
 with(coxTRACE_truncated, {
-  plot(age_truncated, residual_trunc)
+  plot(age, residual_trunc)
   lines(lowess(age, residual_trunc), lwd = 2)
-
 })
-
-
-
+with(coxTRACE_truncated, {
+  plot(wmi, residual_trunc)
+  lines(lowess(wmi, residual_trunc), lwd = 2)
+})
+with(coxTRACE_truncated, {
+  plot(age_pow_2.6, residual_trunc)
+  lines(lowess(age_pow_2.6, residual_trunc), lwd = 2)
+})
+with(coxTRACE_truncated, {
+  plot(ln_wmi, residual_trunc)
+  lines(lowess(ln_wmi, residual_trunc), lwd = 2)
+})
 ```
 
-
-
-
-
 -> we can use this model
-
-
-
-
 
 ## 4.9) Model comparaisons with AIC
 
 ```{r}
 # Check different models variable
-model1 <- coxph(Surv(time_truncated, status_truncated) ~ sex_truncated + chf_truncated  + age_truncated + diabetes_truncated , data = coxTRACE_truncated)
+model1 <- coxph(Surv(time_truncated, status_truncated) ~ sex + chf  + age + diabetes + wmi, data = coxTRACE_truncated)
 model2 <- coxph(Surv(time, status) ~  strata(chf)   + age_pow_2.6 + ln_wmi + strata(diabetes) + strata(vf),data=coxTRACE)
 model3 <- coxph(Surv(time, status) ~ age_pow_2.6 + ln_wmi + strata(diabetes,vf) + strata(chf),data=coxTRACE)
 model4 <- coxph(Surv(time, status) ~ strata(chf)   + age_pow_2.6 + strata(wmi) + strata(diabetes) + strata(vf),data=coxTRACE)
@@ -1043,8 +1060,8 @@ cat("AIC with tt():", aic_7, "\n")
 
 ##
 ```{r}
-bestmodelaic<-coxph(Surv(time_truncated, status_truncated) ~ sex_truncated + chf_truncated  + age_truncated + diabetes_truncated , data = coxTRACE_truncated)
-fullmodel<-coxph(Surv(time_truncated, status_truncated) ~ sex_truncated + chf_truncated  + age_truncated + diabetes_truncated +wmi_truncated +vf_truncated , data = coxTRACE_truncated)
+bestmodelaic<-coxph(Surv(time_truncated, status_truncated) ~ sex + chf  + age + diabetes + wmi , data = coxTRACE_truncated)
+fullmodel<-coxph(Surv(time_truncated, status_truncated) ~ sex + chf  + age + diabetes + wmi + vf , data = coxTRACE_truncated)
 
 plot(survfit(bestmodelaic), main="Survival Probability - Truncated data",
      ylab="Probability", xlab="Years",
@@ -1058,24 +1075,28 @@ lines(survfit(fullmodel, type="fleming"), fun="cumhaz", col="red", lty=2)
 
 ```
 
-
-
 ## 4.10) Model comparaisons with cross-validation
 
 ### 4.10.1) Functions for Verweij & Van Houwelingen Cross Validation
 ```{r}
 #Make the input coxph function
-coxph_chosen <- function(data, formula, beta_init=NULL){
+coxph_chosen <- function(data, formula, beta_init=NULL, tt = FALSE){
   if (is.null(beta_init)){
-    fit <- coxph(formula, data=data)
+    ifelse(isTRUE(tt),
+    fit <- coxph(formula, data=data, tt=function(x, t, ...) x * log(t + 1)),
+    fit <- coxph(formula, data=data, tt=NULL)
+    )
   } else {
-    fit <- coxph(formula, data=data, init=beta_init)
+    ifelse(isTRUE(tt),
+    fit <- coxph(formula, data=data, init=beta_init, tt=function(x, t, ...) x * log(t + 1)),
+    fit <- coxph(formula, data=data, init=beta_init, tt=NULL)
+    )
   }
   return(fit)
 }
 
 #Generate data frame ordered by survival time and with survival group column (necessary for likelihood calculation)
-cross_validation <- function(df, formula, nb_folds=10){
+cross_validation <- function(df, formula, nb_folds=10, tt=FALSE){
   #Initialize the folds
   folds <- createFolds(df[,1], k = nb_folds)
   #Prepare variables to store results
@@ -1088,11 +1109,11 @@ cross_validation <- function(df, formula, nb_folds=10){
     #df_test <- df[folds[[i]],]
     
     # Train the model using fold
-    fit <- coxph_chosen(df_train, formula)
+    fit <- coxph_chosen(df_train, formula, beta_init=NULL, tt = tt)
     betas <- as.vector(fit$coefficients)
     
     # Train with all data, but using the betas derived from the fold
-    fit_global <- coxph_chosen(df, formula, betas)
+    fit_global <- coxph_chosen(df, formula, beta_init=betas, tt = tt)
     
     #Save log likelihoods
     log_likelihood_train[[i]] <- fit$loglik[2] #Retrieve the final log likelihood (final betas)
@@ -1113,26 +1134,29 @@ formulas <- c(Surv(time, status) ~  strata(chf)   + age_pow_2.6 + ln_wmi + strat
              Surv(time, status) ~ age_pow_2.6 + ln_wmi + strata(diabetes,vf) + strata(chf),
              Surv(time, status) ~ strata(chf)   + age_pow_2.6 + strata(wmi) + strata(diabetes) + strata(vf),
              Surv(time, status) ~ strata(chf)   + age_pow_2.6 + strata(wmi,diabetes) + strata(vf),
-             Surv(time, status) ~ strata(chf)   + age_pow_2.6 + strata(wmi,diabetes,vf)
+             Surv(time, status) ~ strata(chf)   + age_pow_2.6 + strata(wmi,diabetes,vf),
+             Surv(time, status) ~ age_pow_2.6   + ln_wmi   + vf + tt(vf) + tt(diabetes)
            )
+tt_list <- c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)
+i <- 1 #counter
 for (formula in formulas){
-  cross_validation(coxTRACE, formula)
+  cross_validation(coxTRACE, formula, nb_folds=10, tt=tt_list[i])
+  i = i +1
 }
 ```
 ### 4.10.2b) Run the truncated CoxPH Model through the cross validation
 ```{r}
 set.seed(3213)
-formulas <- c(Surv(time_truncated, status_truncated) ~ sex_truncated + chf_truncated  + age_truncated + diabetes_truncated
-           #  "Surv(time, status == 9) ~ age + sex + wmi + diabetes + chf + vf",
-            # "Surv(time, status == 9) ~ ridge(age + sex + wmi + diabetes + chf + vf)",
-             #"Surv(time, status == 9) ~ age + wmi + strata(sex + diabetes + chf + vf)"
-           )
+formulas <- c(Surv(time_truncated, status_truncated) ~ sex + chf  + age + diabetes + wmi)
 for (formula in formulas){
   cross_validation(coxTRACE_truncated, formula)
 }
 ```
 
-## 4.11) TimeCox model - other approach for analyzing time dependencies and transformations
+## IGNORE : TimeCox model - other approach for analyzing time dependencies and transformations
+This model is used for automatic transformation of time-dependent parameters/features, but it is difficult to extract full
+results and explain them. In particular, the time transformations are not made available. AIC and cross-validation cannot
+be (easily) performed either. It is thus difficult to assess the quality of the model.
 
 ```{r}
 timecox_model <- timecox(Surv(time, status) ~ age + chf + vf + diabetes + wmi, 
