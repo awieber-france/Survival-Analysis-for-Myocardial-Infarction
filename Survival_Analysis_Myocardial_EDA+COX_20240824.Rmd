@@ -102,9 +102,9 @@ Event Distribution: The high median status value suggests that a large proportio
 ## 2.3) Frequencies of the different variable
 ```{r}
 par(mfrow=c(2,2))
-hist(TRACE$age)
-hist(TRACE$time)
-hist(TRACE$wmi)
+hist(TRACE$time, main="Histogram of Time", xlab="Years")
+hist(TRACE$age, main="Histogram of Age", xlab="Years")
+hist(TRACE$wmi, main="Histogram of WMI", xlab="Value")
 ```
 ## 2.4) Cleaning of status variable
 ```{r}
@@ -272,7 +272,9 @@ pairs(~age + wmi + time,data=TRACE)
 ```{r}
 cor(TRACE[,2:8])
 ```
-# 3) KAPLAN-MEIER ESTIMATION FOR OVERALL SURVIVAL
+# 3) KAPLAN-MEIER ESTIMATION FOR OVERALL SURVIVAL (Nonparametric Estimation of Survival and Comparison of Groups
+
+    This section involves Kaplan-Meier estimation, which is a nonparametric method used to estimate the survival function from the data. The overall survival probability is estimated, and the survival probability is compared between different groups, such as male and female patients. A log-rank test is performed to statistically compare the survival curves between these groups.
 
 ## 3.1) Baseline model
 ```{r}
@@ -295,7 +297,7 @@ After fitting the model, it generates a plot showing the survival probability ov
     Here, the survival analysis is extended by grouping the data based on the sex of the individuals. This allows for a comparison of survival probabilities between different groups (in this case, males and females). A separate Kaplan-Meier curve is generated for each group, and these curves are plotted together to visually compare the survival experiences of the groups over time.
     
 ```{r}
-#Model
+# Model
 km_fit_sex <- survfit(Surv(time, status == 9) ~ sex, data = TRACE)
 
 # Plotting
@@ -305,11 +307,10 @@ ggsurvplot(km_fit_sex,
            xlab = "Time (years)", 
            ylab = "Survival Probability", 
            legend.labs = c("Male", "Female"))
-
 ```
 
 ```{r}
-#Log-rank test to compare survival between groups
+# Log-rank test to compare survival between groups
 surv_diff <- survdiff(Surv(time, status == 9) ~ sex, data = TRACE)
 
 # Display the result
@@ -317,8 +318,11 @@ surv_diff
 ```
 
 ## 3.3) Kaplan-Meier Estimation by Age Group
-  Here patients are divided into three age groups: < 60 years, 60-70 years, and > 70 years. This is done using the cut function, which segments continuous age data into specified intervals.
+
+Here patients are divided into three age groups: < 60 years, 60-70 years, and > 70 years. This is done using the cut function, which segments continuous age data into specified intervals.
+
 Kaplan-Meier Fit: A Kaplan-Meier survival curve is estimated for each of these age groups using the survfit function.
+
 Plotting: The ggsurvplot function is used to visualize the survival curves for each age group, showing how survival probability changes over time across the different age categories.
 
 ```{r}
@@ -335,9 +339,14 @@ ggsurvplot(km_fit_age,
            xlab = "Time (years)", 
            ylab = "Survival Probability", 
            legend.labs = levels(TRACE$age_group))
-
 ```
+```{r}
+# Log-rank test to compare survival between Age Group
+km_fit_age <- survdiff(Surv(time, status == 9) ~ age_group, data = TRACE)
 
+# Display the result
+km_fit_age
+```
 
 ## 3.4) Kaplan-Meier Estimation by WMI Group
 
@@ -359,14 +368,23 @@ ggsurvplot(km_fit_wmi,
            xlab = "Time (years)", 
            ylab = "Survival Probability", 
            legend.labs = levels(TRACE$wmi_group))
+```
+```{r}
+# Log-rank test to compare survival WMI Group
+km_fit_wmi <- survdiff(Surv(time, status == 9) ~ wmi_group, data = TRACE)
 
+# Display the result
+km_fit_wmi
 ```
 
 ## 3.5) Kaplan-Meier Estimation by Diabetes Status
 
 Patients are grouped based on the presence or absence of diabetes.
+
 Kaplan-Meier Fit: A Kaplan-Meier survival analysis is performed separately for patients with and without diabetes.
+
 Plotting: The resulting survival curves are displayed, showing differences in survival probabilities between diabetic and non-diabetic patients.
+
 ```{r}
 # Kaplan-Meier fit by diabetes status
 km_fit_diabetes <- survfit(Surv(time, status == 9) ~ diabetes, data = TRACE)
@@ -378,13 +396,21 @@ ggsurvplot(km_fit_diabetes,
            xlab = "Time (years)", 
            ylab = "Survival Probability", 
            legend.labs = c("Absent", "Present"))
+```
+```{r}
+# Log-rank test to compare survival Diabetes Status
+km_fit_diabetes <- survdiff(Surv(time, status == 9) ~ diabetes, data = TRACE)
 
+# Display the result
+km_fit_diabetes
 ```
 
 ## 3.6) Kaplan-Meier Estimation by Ventricular Fibrillation (VF) Status
 
 Patients are divided based on whether they have ventricular fibrillation (VF) or not.
+
 Kaplan-Meier Fit: The survival analysis is carried out for both groups: those with VF and those without.
+
 Plotting: The survival curves for patients with and without VF are plotted, allowing visual comparison of survival probabilities between the two groups.
 
 ```{r}
@@ -398,7 +424,13 @@ ggsurvplot(km_fit_vf,
            xlab = "Time (years)", 
            ylab = "Survival Probability", 
            legend.labs = c("Absent", "Present"))
+```
+```{r}
+# Log-rank test to compare survival Ventricular Fibrillation Status
+km_fit_vf <- survdiff(Surv(time, status == 9) ~ vf, data = TRACE)
 
+# Display the result
+km_fit_vf
 ```
 
 ## 3.7) Cross Group Analysis: Diabetes Status and Ventricular Fibrillation (VF) Status
@@ -421,6 +453,13 @@ ggsurvplot(km_fit_diabetes_vf,
                            "Diabetes Present & VF Absent", "Diabetes Present & VF Present"))
 
 ```
+```{r}
+# Log-rank test to compare survival by Diabetes and Ventricular Fibrillation Status
+km_fit_diabetes_vf <- survdiff(Surv(time, status == 9) ~ diabetes + vf, data = TRACE)
+
+# Display the result
+km_fit_diabetes_vf
+```
 
 ## 3.8) Cross Group Analysis: Age Group and Ventricular Fibrillation (VF) Status
       
@@ -441,7 +480,13 @@ ggsurvplot(km_fit_age_vf,
            legend.labs = c("< 60 years & VF Absent", "< 60 years & VF Present", 
                            "60-70 years & VF Absent", "60-70 years & VF Present", 
                            "> 70 years & VF Absent", "> 70 years & VF Present"))
+```
+```{r}
+# Log-rank test to compare survival by Age Group and Ventricular Fibrillation Status
+km_fit_age_vf <- survdiff(Surv(time, status == 9) ~ age_group + vf, data = TRACE)
 
+# Display the result
+km_fit_age_vf
 ```
 
 ## 3.9) Cross Group Analysis: WMI Group and Diabetes Status
@@ -463,27 +508,14 @@ ggsurvplot(km_fit_wmi_diabetes,
            legend.labs = c("Low WMI & Diabetes Absent", "Low WMI & Diabetes Present", 
                            "Medium WMI & Diabetes Absent", "Medium WMI & Diabetes Present", 
                            "High WMI & Diabetes Absent", "High WMI & Diabetes Present"))
-
 ```
-
-## 3.10 Multiplot of All Kaplan-Meier Analyses
     
-    The multiplot section compiles all the Kaplan-Meier plots from the earlier sections into one combined view. This allows for a side-by-side comparison of survival probabilities across different groupings, providing a comprehensive visual summary of the survival analysis.
-
 ```{r}
-# Generate individual plots
-p1 <- ggsurvplot(km_fit_sex, conf.int = TRUE, title = "Survival by Sex")
-p2 <- ggsurvplot(km_fit_age, conf.int = TRUE, title = "Survival by Age Group")
-p3 <- ggsurvplot(km_fit_wmi, conf.int = TRUE, title = "Survival by WMI Group")
-p4 <- ggsurvplot(km_fit_diabetes, conf.int = TRUE, title = "Survival by Diabetes Status")
-p5 <- ggsurvplot(km_fit_vf, conf.int = TRUE, title = "Survival by Ventricular Fibrillation Status")
-p6 <- ggsurvplot(km_fit_diabetes_vf, conf.int = TRUE, title = "Survival by Diabetes and VF Status")
-p7 <- ggsurvplot(km_fit_age_vf, conf.int = TRUE, title = "Survival by Age Group and VF Status")
-p8 <- ggsurvplot(km_fit_wmi_diabetes, conf.int = TRUE, title = "Survival by WMI and Diabetes Status")
+# Log-rank test to compare survival by WMI and Diabetes Status
+km_fit_wmi_diabetes <- survdiff(Surv(time, status == 9) ~ wmi_group + diabetes, data = TRACE)
 
-# Arrange the plots in a multiplot layout
-grid.arrange(p1$plot, p2$plot, p3$plot, p4$plot, p5$plot, p6$plot, p7$plot, p8$plot, ncol = 2)
-
+# Display the result
+km_fit_wmi_diabetes
 ```
 
 # 4) COX PROPORTIONAL HAZARD
@@ -1100,7 +1132,7 @@ for (formula in formulas){
 }
 ```
 
-## 4.9) TimeCox model - other approach for analyzing time dependencies and transformations
+## 4.11) TimeCox model - other approach for analyzing time dependencies and transformations
 
 ```{r}
 timecox_model <- timecox(Surv(time, status) ~ age + chf + vf + diabetes + wmi, 
@@ -1158,7 +1190,5 @@ timecox_model3 <- timecox(Surv(time, status) ~ const(age) + const(chf) + vf + co
 
 
 ```
-
--> 
 
 
